@@ -1,0 +1,128 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #f8fafc;
+}
+
+.app-background {
+  position: relative;
+  overflow-x: hidden;
+  background: #f8fafc;
+}
+
+.app-background > header,
+.app-background > main {
+  position: relative;
+}
+
+.app-background > header {
+  z-index: 50;
+}
+
+.app-background > main {
+  z-index: 1;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.page-shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.premium-surface {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+}
+
+.command-center {
+  position: relative;
+  isolation: isolate;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #eef2f7 25%, #f8fafc 38%, #eef2f7 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: 0 0;
+  }
+}
+
+.hero-bg {
+  background-color: #ffffff;
+  background-position: center;
+  background-size: cover;
+}
+
+.hero-visual {
+  position: relative;
+  min-height: 548px;
+}
+
+.hero-visual-grid {
+  position: absolute;
+  inset: 28px 18px 18px;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(rgba(66, 133, 244, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(66, 133, 244, 0.08) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.76), transparent 72%);
+}
+
+.focus-ring {
+  outline: 3px solid rgba(66, 133, 244, 0.24);
+  outline-offset: 3px;
+}
+
+@media (max-width: 720px) {
+  .page-shell {
+    width: min(100% - 24px, 1180px);
+  }
+}
