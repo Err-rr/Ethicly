@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { useDropzone } from "react-dropzone";
 import Button from "./Button.jsx";
 import LoadingSpinner from "./LoadingSpinner.jsx";
-import { parseCsv } from "../utils/csv.js";
 import { useAudit } from "../services/AuditContext.jsx";
 
 export default function FileUpload() {
@@ -23,13 +22,31 @@ export default function FileUpload() {
       if (!file) return;
 
       try {
-        const text = await file.text();
-        const parsed = parseCsv(text);
-        const nextDataset = { fileName: file.name, ...parsed };
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("http://127.0.0.1:5000/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Upload failed");
+        }
+
+        const nextDataset = {
+          fileName: file.name,
+          rows: data.rows_preview,
+          columns: data.columns,
+        };
+
         setPreview(nextDataset);
         await uploadDataset(nextDataset);
+
       } catch (nextError) {
-        setError(nextError.message || "We could not read that CSV file.");
+        setError(nextError.message || "Failed to upload dataset.");
       }
     },
     [setError, uploadDataset]
@@ -65,8 +82,7 @@ export default function FileUpload() {
         </div>
         <h2 className="mt-5 text-2xl font-bold text-[#202124]">Upload a fairness audit dataset</h2>
         <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-[#5f6368]">
-          Drop in a CSV with a group column and outcome column. Ethicly will preview the records and calculate
-          comparison metrics.
+          Drop in a CSV file. Ethicly will send it to backend, analyze it, and show results.
         </p>
         <Button onClick={open} className="mt-6">
           Choose CSV

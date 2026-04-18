@@ -1,9 +1,15 @@
 from flask import Flask, request, jsonify
 import pandas as pd
+import numpy as np
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
+
+# Optional: test route
+@app.route("/")
+def home():
+    return "Backend is running 🚀"
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
@@ -15,9 +21,13 @@ def upload_file():
     try:
         df = pd.read_csv(file)
 
+        # 🔥 FIX: replace NaN with None (JSON-safe)
+        df = df.replace({np.nan: None})
+
         columns = df.columns.tolist()
 
-        target_column = columns[-1]
+        # Simple assumption for demo
+        target_column = columns[-1] if columns else None
 
         sensitive_candidates = ["gender", "sex", "race", "age"]
         sensitive_column = None
@@ -40,4 +50,3 @@ def upload_file():
 
 if __name__ == "__main__":
     app.run(debug=True)
-    
