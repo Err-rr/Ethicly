@@ -30,7 +30,7 @@ export default function DashboardPage() {
           <p className="text-sm font-semibold text-google-blue">Audit dashboard</p>
           <h1 className="mt-2 text-3xl font-bold tracking-normal text-[#202124] sm:text-4xl">Fairness overview</h1>
           <p className="mt-3 max-w-3xl text-base leading-7 text-[#5f6368]">
-            {dataset ? audit.summary : "Sample data is displayed until a dataset is uploaded."}
+            {audit.summary}
           </p>
         </div>
         {isProcessing && <LoadingSpinner label="Refreshing audit" />}
@@ -39,24 +39,24 @@ export default function DashboardPage() {
       {isProcessing && <DashboardSkeleton />}
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <ScoreCard score={audit.fairnessScore} />
+        <ScoreCard score={audit.fairness_score} />
         <MetricCard
-          label="Groups analyzed"
-          value={audit.groupComparison.length}
-          detail="Largest segments in the dataset"
+          label="Parity"
+          value={audit.parity.toFixed(2)}
+          detail="Lowest approval rate divided by highest"
           tone="blue"
         />
         <MetricCard
-          label="Review items"
-          value={audit.biasResults.filter((item) => item.status !== "Pass").length}
-          detail="Needs action or monitoring"
+          label="Approval gap"
+          value={`${(audit.approval_gap * 100).toFixed(1)}%`}
+          detail="Difference between highest and lowest groups"
           tone="yellow"
         />
         <MetricCard
           label="Data status"
-          value={dataset ? "Live" : "Sample"}
-          detail={dataset ? "Uploaded dataset active" : "Demo audit visible"}
-          tone={dataset ? "green" : "blue"}
+          value="Live"
+          detail="Uploaded dataset active"
+          tone="green"
         />
       </div>
 

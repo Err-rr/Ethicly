@@ -1,23 +1,27 @@
 import { createContext, useContext, useMemo, useState } from "react";
-import { createAuditFromRows, sampleAudit } from "../utils/auditEngine.js";
 
 const AuditContext = createContext(null);
 
 export function AuditProvider({ children }) {
   const [dataset, setDataset] = useState(null);
-  const [audit, setAudit] = useState(sampleAudit);
+  const [audit, setAudit] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
 
-  const uploadDataset = async ({ fileName, rows, columns }) => {
+  const uploadDataset = async (backendAudit) => {
     setIsProcessing(true);
     setError("");
 
-    await new Promise((resolve) => setTimeout(resolve, 700));
-
     try {
-      const nextAudit = createAuditFromRows(rows, columns);
-      setDataset({ fileName, rows, columns, uploadedAt: new Date().toISOString() });
+      const nextAudit = normalizeBackendAudit(backendAudit);
+      setDataset({
+        fileName: backendAudit.fileName,
+        rows: backendAudit.rows_preview,
+        columns: backendAudit.columns,
+        targetColumn: backendAudit.target_column,
+        sensitiveColumn: backendAudit.sensitive_column,
+        uploadedAt: new Date().toISOString()
+      });
       setAudit(nextAudit);
     } catch (nextError) {
       setError(nextError.message || "We could not process that dataset.");
@@ -32,6 +36,47 @@ export function AuditProvider({ children }) {
   );
 
   return <AuditContext.Provider value={value}>{children}</AuditContext.Provider>;
+}
+
+function normalizeBackendAudit(data) {
+  const groupRates = data.group_rates || {};
+  const groupComparison = Object.entries(groupRates).map(([group, rate]) => ({
+    group,
+    approvalRate: Math.round(Number(rate || 0) * 1000) / 10
+  }));
+
+  const parity = Number(data.parity ?? 0);
+  const approvalGap = Number(data.approval_gap ?? 0);
+  const fairnessScore = Number(data.fairness_score ?? 0);
+
+  return {
+    ...data,
+    fairness_score: fairnessScore,
+    parity,
+    approval_gap: approvalGap,
+    approvalGap,
+    group_rates: groupRates,
+    groupComparison,
+    biasResults: [
+      {
+        label: "Demographic parity",
+        status: parity >= 0.8 ? "Pass" : parity >= 0.6 ? "Monitor" : "Review",
+        value: `${parity.toFixed(2)} ratio`
+      },
+      {
+        label: "Approval gap",
+        status: approvalGap <= 0.12 ? "Pass" : approvalGap <= 0.22 ? "Monitor" : "Review",
+        value: `${(approvalGap * 100).toFixed(1)}% gap`
+      },
+      {
+        label: "Group coverage",
+        status: groupComparison.length >= 2 ? "Pass" : "Review",
+        value: `${groupComparison.length} group${groupComparison.length === 1 ? "" : "s"} found`
+      }
+    ],
+    summary: `Real audit calculated from ${data.sensitive_column} approval rates against ${data.target_column}.`,
+    trend: [{ name: "Latest", fairness: fairnessScore }]
+  };
 }
 
 export function useAudit() {

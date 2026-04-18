@@ -38,12 +38,17 @@ export default function FileUpload() {
 
         const nextDataset = {
           fileName: file.name,
-          rows: data.rows_preview,
+          rows: data.rows_preview || [],
           columns: data.columns,
+          targetColumn: data.target_column,
+          sensitiveColumn: data.sensitive_column,
+          groupRates: data.group_rates,
+          parity: data.parity,
+          approvalGap: data.approval_gap,
         };
 
         setPreview(nextDataset);
-        await uploadDataset(nextDataset);
+        await uploadDataset({ ...data, fileName: file.name });
 
       } catch (nextError) {
         setError(nextError.message || "Failed to upload dataset.");
@@ -123,7 +128,9 @@ function PreviewTable({ dataset }) {
       <div className="flex flex-col gap-2 border-b border-[#e5e7eb] p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-bold text-[#202124]">{dataset.fileName}</h3>
-          <p className="text-sm text-[#5f6368]">{dataset.rows.length} records ready for audit</p>
+          <p className="text-sm text-[#5f6368]">
+            {dataset.rows.length} preview records from {dataset.sensitiveColumn || "detected groups"}
+          </p>
         </div>
         <Button to="/dashboard" variant="secondary">
           View Dashboard
@@ -145,7 +152,7 @@ function PreviewTable({ dataset }) {
               <tr key={`${dataset.fileName}-${index}`}>
                 {dataset.columns.slice(0, 7).map((column) => (
                   <td key={column} className="max-w-52 truncate px-4 py-3 text-[#3c4043]">
-                    {row[column] || "-"}
+                    {row[column] ?? "-"}
                   </td>
                 ))}
               </tr>

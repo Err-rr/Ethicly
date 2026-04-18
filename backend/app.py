@@ -1,15 +1,15 @@
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 import pandas as pd
-import numpy as np
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
-# Optional: test route
+
 @app.route("/")
 def home():
-    return "Backend is running 🚀"
+    return "Backend is running"
+
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
@@ -20,33 +20,76 @@ def upload_file():
 
     try:
         df = pd.read_csv(file)
-
-        # 🔥 FIX: replace NaN with None (JSON-safe)
-        df = df.replace({np.nan: None})
-
         columns = df.columns.tolist()
 
-        # Simple assumption for demo
-        target_column = columns[-1] if columns else None
+        if not columns:
+            return jsonify({"error": "The uploaded CSV does not contain any columns"}), 400
 
-        sensitive_candidates = ["gender", "sex", "race", "age"]
-        sensitive_column = None
+        target_column = columns[-1]
+        sensitive_column = find_sensitive_column(columns)
 
-        for col in columns:
-            if col.lower() in sensitive_candidates:
-                sensitive_column = col
-                break
+        if sensitive_column is None:
+            return jsonify({
+                "error": "No sensitive column found. Include one of: gender, sex, race, age."
+            }), 400
+
+        target_values = pd.to_numeric(df[target_column], errors="coerce")
+        if not target_values.dropna().isin([0, 1]).all():
+            return jsonify({
+                "error": f"Target column '{target_column}' must be binary with 0/1 values."
+            }), 400
+
+        audit_df = df[[sensitive_column]].copy()
+        audit_df[target_column] = target_values
+        audit_df = audit_df.dropna(subset=[sensitive_column, target_column])
+
+        if audit_df.empty:
+            return jsonify({
+                "error": "No valid rows found after removing missing target or sensitive values."
+            }), 400
+
+        group_rates = audit_df.groupby(sensitive_column)[target_column].mean().to_dict()
+        group_rates = {
+            str(group): None if pd.isna(rate) else float(rate)
+            for group, rate in group_rates.items()
+        }
+
+        valid_rates = [rate for rate in group_rates.values() if rate is not None]
+        if not valid_rates:
+            return jsonify({"error": "Could not calculate group approval rates."}), 400
+
+        min_rate = min(valid_rates)
+        max_rate = max(valid_rates)
+        parity = 1.0 if max_rate == 0 else min_rate / max_rate
+        approval_gap = max_rate - min_rate
+        fairness_score = int(parity * 100)
+
+        preview_df = df.where(pd.notna(df), None)
 
         return jsonify({
             "columns": columns,
+            "rows_preview": preview_df.head(5).to_dict(orient="records"),
+            "group_rates": group_rates,
+            "parity": parity,
+            "approval_gap": approval_gap,
+            "fairness_score": fairness_score,
             "target_column": target_column,
-            "sensitive_column": sensitive_column,
-            "rows_preview": df.head(5).to_dict(orient="records")
+            "sensitive_column": sensitive_column
         })
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception as error:
+        return jsonify({"error": str(error)}), 500
+
+
+def find_sensitive_column(columns):
+    sensitive_candidates = {"gender", "sex", "race", "age"}
+
+    for column in columns:
+        if column.strip().lower() in sensitive_candidates:
+            return column
+
+    return None
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)

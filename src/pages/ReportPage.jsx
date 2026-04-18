@@ -40,8 +40,8 @@ export default function ReportPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <ReportStat label="Fairness score" value={`${audit.fairnessScore}/100`} />
-          <ReportStat label="Records analyzed" value={dataset.rows.length} />
+          <ReportStat label="Fairness score" value={`${audit.fairness_score}/100`} />
+          <ReportStat label="Parity" value={audit.parity.toFixed(2)} />
           <ReportStat label="Groups compared" value={audit.groupComparison.length} />
         </div>
       </Card>
