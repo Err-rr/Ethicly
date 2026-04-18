@@ -23,6 +23,9 @@ export default function DashboardPage() {
     );
   }
 
+  const sensitive = audit?.sensitive_column || "selected feature";
+  const target = audit?.target_column || "target";
+
   return (
     <PageShell className="command-center pb-16">
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -30,7 +33,7 @@ export default function DashboardPage() {
           <p className="text-sm font-semibold text-google-blue">Audit dashboard</p>
           <h1 className="mt-2 text-3xl font-bold tracking-normal text-[#202124] sm:text-4xl">Fairness overview</h1>
           <p className="mt-3 max-w-3xl text-base leading-7 text-[#5f6368]">
-            {audit.summary}
+            Real audit calculated from {sensitive} approval rates against {target}.
           </p>
         </div>
         {isProcessing && <LoadingSpinner label="Refreshing audit" />}
