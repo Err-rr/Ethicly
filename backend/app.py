@@ -34,6 +34,7 @@ def upload_file():
             }), 400
 
         target_values = pd.to_numeric(df[target_column], errors="coerce")
+
         if not target_values.dropna().isin([0, 1]).all():
             return jsonify({
                 "error": f"Target column '{target_column}' must be binary with 0/1 values."
@@ -45,12 +46,12 @@ def upload_file():
 
         if audit_df.empty:
             return jsonify({
-                "error": "No valid rows found after removing missing target or sensitive values."
+                "error": "No valid rows found after removing missing values."
             }), 400
 
         group_rates = audit_df.groupby(sensitive_column)[target_column].mean().to_dict()
         group_rates = {
-            str(group): None if pd.isna(rate) else float(rate)
+            str(group): float(rate) if pd.notna(rate) else None
             for group, rate in group_rates.items()
         }
 
@@ -60,16 +61,22 @@ def upload_file():
             for group, value in group_distribution.items()
         }
 
-        valid_rates = [rate for rate in group_rates.values() if rate is not None]
+        valid_rates = [r for r in group_rates.values() if r is not None]
+
         if not valid_rates:
             return jsonify({"error": "Could not calculate group approval rates."}), 400
 
         min_rate = min(valid_rates)
         max_rate = max(valid_rates)
 
-        parity = 1.0 if max_rate == 0 else min_rate / max_rate
-        approval_gap = max_rate - min_rate
-        fairness_score = int(parity * 100)
+        if max_rate == 0:
+            parity = 1.0
+            approval_gap = 0.0
+        else:
+            parity = min_rate / max_rate
+            approval_gap = max_rate - min_rate
+
+        fairness_score = int(round(parity * 100))
 
         bias_threshold = 0.8
         verdict = "Biased" if parity < bias_threshold else "Unbiased"
@@ -83,8 +90,8 @@ def upload_file():
             "group_rates": group_rates,
             "group_distribution": group_distribution,
 
-            "parity": parity,
-            "approval_gap": approval_gap,
+            "parity": float(round(parity, 4)),
+            "approval_gap": float(round(approval_gap, 4)),
             "fairness_score": fairness_score,
             "verdict": verdict,
 

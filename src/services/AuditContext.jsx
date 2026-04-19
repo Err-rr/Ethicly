@@ -59,10 +59,14 @@ function normalizeBackendAudit(data) {
   const parity = Number(data.parity ?? 0);
   const approvalGap = Number(data.approval_gap ?? 0);
   const fairnessScore = Number(data.fairness_score ?? 0);
-  const verdict = data.verdict || "Unknown";
 
   const sensitive = data.sensitive_column || "selected feature";
   const target = data.target_column || "target";
+
+  // 🔥 FIX: ALWAYS compute verdict safely
+  const verdict =
+    data.verdict ||
+    (parity < 0.6 ? "Biased" : "Unbiased");
 
   return {
     ...data,
