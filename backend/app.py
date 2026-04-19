@@ -54,25 +54,40 @@ def upload_file():
             for group, rate in group_rates.items()
         }
 
+        group_distribution = audit_df[sensitive_column].value_counts(normalize=True).to_dict()
+        group_distribution = {
+            str(group): float(value)
+            for group, value in group_distribution.items()
+        }
+
         valid_rates = [rate for rate in group_rates.values() if rate is not None]
         if not valid_rates:
             return jsonify({"error": "Could not calculate group approval rates."}), 400
 
         min_rate = min(valid_rates)
         max_rate = max(valid_rates)
+
         parity = 1.0 if max_rate == 0 else min_rate / max_rate
         approval_gap = max_rate - min_rate
         fairness_score = int(parity * 100)
+
+        bias_threshold = 0.8
+        verdict = "Biased" if parity < bias_threshold else "Unbiased"
 
         preview_df = df.where(pd.notna(df), None)
 
         return jsonify({
             "columns": columns,
             "rows_preview": preview_df.head(5).to_dict(orient="records"),
+
             "group_rates": group_rates,
+            "group_distribution": group_distribution,
+
             "parity": parity,
             "approval_gap": approval_gap,
             "fairness_score": fairness_score,
+            "verdict": verdict,
+
             "target_column": target_column,
             "sensitive_column": sensitive_column
         })

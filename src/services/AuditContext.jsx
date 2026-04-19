@@ -47,19 +47,19 @@ export function AuditProvider({ children }) {
   return <AuditContext.Provider value={value}>{children}</AuditContext.Provider>;
 }
 
-/* ---------------- NORMALIZER ---------------- */
-
 function normalizeBackendAudit(data) {
   const groupRates = data.group_rates || {};
+  const groupDistribution = data.group_distribution || {};
 
   const groupComparison = Object.entries(groupRates).map(([group, rate]) => ({
     group,
-    approvalRate: Math.round(Number(rate || 0) * 1000) / 10 // % with 1 decimal
+    approvalRate: Math.round(Number(rate || 0) * 1000) / 10
   }));
 
   const parity = Number(data.parity ?? 0);
   const approvalGap = Number(data.approval_gap ?? 0);
   const fairnessScore = Number(data.fairness_score ?? 0);
+  const verdict = data.verdict || "Unknown";
 
   const sensitive = data.sensitive_column || "selected feature";
   const target = data.target_column || "target";
@@ -67,17 +67,17 @@ function normalizeBackendAudit(data) {
   return {
     ...data,
 
-    // core metrics
     fairness_score: fairnessScore,
     parity,
     approval_gap: approvalGap,
     approvalGap,
 
-    // raw + processed
     group_rates: groupRates,
     groupComparison,
+    group_distribution: groupDistribution,
 
-    // dashboard cards
+    verdict,
+
     biasResults: [
       {
         label: "Demographic parity",
@@ -102,10 +102,8 @@ function normalizeBackendAudit(data) {
       }
     ],
 
-    // 🔥 FIXED DYNAMIC SUMMARY (IMPORTANT)
     summary: `Real audit calculated from ${sensitive} approval rates against ${target}.`,
 
-    // small chart
     trend: [
       {
         name: "Latest",
@@ -113,13 +111,10 @@ function normalizeBackendAudit(data) {
       }
     ],
 
-    // 🔥 expose for UI usage directly
     sensitive_column: sensitive,
     target_column: target
   };
 }
-
-/* ---------------- HOOK ---------------- */
 
 export function useAudit() {
   const context = useContext(AuditContext);
