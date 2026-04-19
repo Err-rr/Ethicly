@@ -26,8 +26,7 @@ export default function DashboardPage() {
   const sensitive = audit?.sensitive_column || "selected feature";
   const target = audit?.target_column || "target";
 
-  const verdict =
-    audit.parity < 0.6 ? "Biased" : "Unbiased";
+  const verdict = audit.parity < 0.6 ? "Biased" : "Unbiased";
 
   return (
     <PageShell className="pb-16">
@@ -46,53 +45,52 @@ export default function DashboardPage() {
 
       {isProcessing && <DashboardSkeleton />}
 
-      {/* Responsive: 1 col → 2 col → 3 col → 5 col */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
 
-        <MetricCard
-          label="Bias verdict"
-          value={verdict}
-          detail={
-            verdict === "Biased"
-              ? "Significant disparity detected"
-              : "No major bias detected"
-          }
-          tone={verdict === "Biased" ? "red" : "green"}
-        />
+        {/* Bias verdict — colored value text */}
+        <Card className="min-h-44">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm font-semibold text-[#5f6368]">Bias verdict</p>
+          </div>
+          <p className={`mt-4 text-4xl font-bold ${verdict === "Biased" ? "text-red-500" : "text-green-500"}`}>
+            {verdict}
+          </p>
+          <p className="mt-3 text-sm text-[#5f6368]">
+            {verdict === "Biased" ? "Significant disparity detected" : "No major bias detected"}
+          </p>
+        </Card>
 
         <ScoreCard score={audit.fairness_score} />
 
-        <MetricCard
-          label="Parity"
-          value={audit.parity.toFixed(2)}
-          detail="Lowest approval rate divided by highest"
-          tone="blue"
-        />
-
-        {/* Approval gap card — inline to control layout and fix badge alignment */}
+        {/* Parity */}
         <Card className="min-h-44">
-          <div className="flex flex-col h-full">
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-sm font-semibold text-[#5f6368] leading-tight">Approval gap</p>
-              <span className="shrink-0 inline-flex items-center rounded-full bg-[#fff8df] px-2.5 py-0.5 text-xs font-semibold text-yellow-700">
-                Live
-              </span>
-            </div>
-            <p className="mt-4 text-4xl font-bold text-[#202124] break-all">
-              {(audit.approval_gap * 100).toFixed(1)}%
-            </p>
-            <p className="mt-3 text-sm text-[#5f6368]">
-              Difference between highest and lowest groups
-            </p>
-          </div>
+          <p className="text-sm font-semibold text-[#5f6368]">Parity</p>
+          <p className="mt-4 text-4xl font-bold text-[#202124]">
+            {audit.parity.toFixed(2)}
+          </p>
+          <p className="mt-3 text-sm text-[#5f6368]">
+            Lowest approval rate divided by highest
+          </p>
         </Card>
 
-        <MetricCard
-          label="Data status"
-          value="Live"
-          detail="Uploaded dataset active"
-          tone="green"
-        />
+        {/* Approval gap — fixed layout so badge sits top-right correctly */}
+        <Card className="min-h-44">
+          <p className="text-sm font-semibold text-[#5f6368]">Approval gap</p>
+          <p className="mt-4 text-4xl font-bold text-[#202124]">
+            {`${(audit.approval_gap * 100).toFixed(1)}%`}
+          </p>
+          <p className="mt-3 text-sm text-[#5f6368]">
+            Difference between highest and lowest groups
+          </p>
+        </Card>
+
+        {/* Data status */}
+        <Card className="min-h-44">
+          <p className="text-sm font-semibold text-[#5f6368]">Data status</p>
+          <p className="mt-4 text-4xl font-bold text-green-500">Live</p>
+          <p className="mt-3 text-sm text-[#5f6368]">Uploaded dataset active</p>
+        </Card>
+
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_0.9fr]">
@@ -121,7 +119,7 @@ function ScoreCard({ score }) {
           </p>
         </div>
 
-        {/* Fixed: removed bg-white shadow rounded-full that caused the awkward circle */}
+        {/* Removed bg-white shadow rounded-full wrapper — was causing the awkward circle */}
         <div className="relative grid size-16 shrink-0 place-items-center">
           <svg className="absolute size-16 -rotate-90" viewBox="0 0 64 64">
             <circle cx="32" cy="32" r="27" fill="none" stroke="#edf2f7" strokeWidth="6" />
@@ -163,7 +161,7 @@ function BiasResults({ results }) {
   const statusClasses = {
     Pass: "bg-[#eaf6ee] text-green-700",
     Monitor: "bg-[#fff8df] text-yellow-700",
-    Review: "bg-[#fdecea] text-red-600"
+    Review: "bg-[#fdecea] text-red-600",
   };
 
   return (
@@ -182,13 +180,14 @@ function BiasResults({ results }) {
             transition={{ delay: index * 0.05 }}
             className="rounded-xl border border-[#e5e7eb] bg-white p-4"
           >
-            <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-semibold">{result.label}</p>
                 <p className="text-sm text-[#5f6368]">{result.value}</p>
               </div>
-
-              <span className={`shrink-0 px-3 py-1 text-xs font-semibold rounded ${statusClasses[result.status]}`}>
+              <span
+                className={`shrink-0 self-start rounded px-3 py-1 text-xs font-semibold ${statusClasses[result.status]}`}
+              >
                 {result.status}
               </span>
             </div>
