@@ -8,6 +8,7 @@ import DashboardPage from "./pages/DashboardPage.jsx";
 import ReportPage from "./pages/ReportPage.jsx";
 import AuthPage from "./pages/AuthPage.jsx";
 import { auth } from "./firebase.js";
+import ComparePage from "./pages/ComparePage.jsx";
 
 const formatUser = (firebaseUser) => {
   if (!firebaseUser) {
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/report" element={<ReportPage />} />
           <Route path="/auth" element={<AuthPage refreshUser={refreshUser} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/compare" element={<ComparePage />} />
         </Routes>
       </main>
     </div>

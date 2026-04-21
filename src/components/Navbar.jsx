@@ -6,7 +6,9 @@ import { logout } from "../services/auth.js";
 const navItems = [
   { label: "Upload", to: "/upload" },
   { label: "Dashboard", to: "/dashboard" },
-  { label: "Report", to: "/report" }
+  { label: "Report", to: "/report" },
+  { label: "Compare", to: "/compare" }
+  
 ];
 
 export default function Navbar({ user }) {
