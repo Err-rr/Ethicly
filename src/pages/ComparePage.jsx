@@ -6,97 +6,86 @@ import ComparisonChart from "../components/charts/ComparisonChart.jsx";
 export default function ComparePage() {
   const [auditA, setAuditA] = useState(null);
   const [auditB, setAuditB] = useState(null);
-  const [loadingA, setLoadingA] = useState(false);
-  const [loadingB, setLoadingB] = useState(false);
 
-  const uploadFile = async (file, setAudit, setLoading) => {
-    if (!file) return;
-
-    setLoading(true);
-
+  const uploadFile = async (file, setter) => {
     const formData = new FormData();
     formData.append("file", file);
 
-    try {
-      const res = await fetch("http://127.0.0.1:5000/upload", {
-        method: "POST",
-        body: formData
-      });
+    const res = await fetch("http://127.0.0.1:5000/upload", {
+      method: "POST",
+      body: formData
+    });
 
-      const data = await res.json();
-
-      if (data.error) {
-        alert(data.error);
-      } else {
-        setAudit(data);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Upload failed");
-    }
-
-    setLoading(false);
+    const data = await res.json();
+    if (!data.error) setter(data);
   };
 
   const improvement =
     auditA && auditB
       ? auditB.fairness_score - auditA.fairness_score
-      : null;
+      : 0;
 
   return (
     <PageShell>
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto space-y-8">
 
-        <h1 className="text-3xl font-bold mb-8 text-[#202124]">
-          Comparison Mode
-        </h1>
-
-        {/* Upload Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          <UploadCard
-            title="Dataset A"
-            onUpload={(file) => uploadFile(file, setAuditA, setLoadingA)}
-            loading={loadingA}
-          />
-
-          <UploadCard
-            title="Dataset B"
-            onUpload={(file) => uploadFile(file, setAuditB, setLoadingB)}
-            loading={loadingB}
-          />
-
+        {/* 🔥 HERO */}
+        <div>
+          <h1 className="text-4xl font-bold text-[#202124]">
+            Model Comparison
+          </h1>
+          <p className="text-[#5f6368] mt-2">
+            Compare fairness performance across datasets
+          </p>
         </div>
 
-        {/* Results */}
-        {auditA && auditB && (
-          <div className="mt-10 space-y-8">
+        {/* 🔥 Upload */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <Upload title="Dataset A" onUpload={(f) => uploadFile(f, setAuditA)} />
+          <Upload title="Dataset B" onUpload={(f) => uploadFile(f, setAuditB)} />
+        </div>
 
-            {/* 🔥 Graph */}
-            <Card>
-              <h2 className="text-lg font-semibold mb-4 text-[#202124]">
-                Model Comparison
+        {auditA && auditB && (
+          <>
+            {/* 🔥 IMPROVEMENT HERO */}
+            <div className="rounded-2xl p-6 bg-gradient-to-r from-[#4285F4]/10 to-[#34A853]/10 border">
+              <p className="text-sm text-[#5f6368]">Fairness Improvement</p>
+              <h2
+                className="text-3xl font-bold mt-1"
+                style={{
+                  color: improvement > 0 ? "#34A853" : "#EA4335"
+                }}
+              >
+                {improvement > 0 ? "+" : ""}
+                {improvement}
+              </h2>
+            </div>
+
+            {/* 🔥 MAIN GRAPH */}
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold mb-4">
+                Performance Overview
               </h2>
               <ComparisonChart auditA={auditA} auditB={auditB} />
             </Card>
 
-            {/* 🔥 Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* 🔥 KPI GRID */}
+            <div className="grid md:grid-cols-3 gap-6">
 
-              <Metric
-                label="Fairness Score"
+              <KPI
+                title="Fairness Score"
                 a={auditA.fairness_score}
                 b={auditB.fairness_score}
               />
 
-              <Metric
-                label="Parity"
+              <KPI
+                title="Parity"
                 a={auditA.parity.toFixed(2)}
                 b={auditB.parity.toFixed(2)}
               />
 
-              <Metric
-                label="Approval Gap"
+              <KPI
+                title="Approval Gap"
                 a={(auditA.approval_gap * 100).toFixed(1)}
                 b={(auditB.approval_gap * 100).toFixed(1)}
                 suffix="%"
@@ -104,49 +93,34 @@ export default function ComparePage() {
 
             </div>
 
-            {/* 🔥 Verdict */}
-            <Card>
-              <h2 className="font-semibold mb-3 text-[#202124]">
-                Bias Verdict
+            {/* 🔥 VERDICT SECTION */}
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold mb-4">
+                Bias Transition
               </h2>
 
-              <div className="flex items-center justify-between text-lg font-semibold">
+              <div className="flex items-center justify-between">
 
-                <span style={{ color: "#EA4335" }}>
-                  A: {auditA.verdict}
-                </span>
+                <div className="text-center">
+                  <p className="text-sm text-[#5f6368]">Dataset A</p>
+                  <p className="text-xl font-bold text-[#EA4335]">
+                    {auditA.verdict}
+                  </p>
+                </div>
 
-                <span className="text-[#5f6368]">→</span>
+                <div className="text-2xl text-[#5f6368]">→</div>
 
-                <span style={{ color: "#34A853" }}>
-                  B: {auditB.verdict}
-                </span>
+                <div className="text-center">
+                  <p className="text-sm text-[#5f6368]">Dataset B</p>
+                  <p className="text-xl font-bold text-[#34A853]">
+                    {auditB.verdict}
+                  </p>
+                </div>
 
               </div>
             </Card>
 
-            {/* 🔥 Improvement */}
-            <Card>
-              <p className="text-center text-lg font-semibold text-[#202124]">
-                Improvement:
-                <span
-                  style={{
-                    marginLeft: 8,
-                    color:
-                      improvement > 0
-                        ? "#34A853"
-                        : improvement < 0
-                        ? "#EA4335"
-                        : "#5f6368"
-                  }}
-                >
-                  {improvement > 0 ? "+" : ""}
-                  {improvement}
-                </span>
-              </p>
-            </Card>
-
-          </div>
+          </>
         )}
 
       </div>
@@ -154,41 +128,42 @@ export default function ComparePage() {
   );
 }
 
-/* ---------- Upload Card ---------- */
+/* ---------- Upload ---------- */
 
-function UploadCard({ title, onUpload, loading }) {
+function Upload({ title, onUpload }) {
   return (
-    <Card>
-      <h2 className="font-semibold mb-3 text-[#202124]">{title}</h2>
-
+    <Card className="p-6">
+      <p className="font-semibold mb-3">{title}</p>
       <input
         type="file"
         accept=".csv"
         onChange={(e) => onUpload(e.target.files[0])}
       />
-
-      {loading && (
-        <p className="text-sm mt-2 text-[#5f6368]">Uploading...</p>
-      )}
     </Card>
   );
 }
 
-/* ---------- Metric Card ---------- */
+/* ---------- KPI ---------- */
 
-function Metric({ label, a, b, suffix = "" }) {
+function KPI({ title, a, b, suffix = "" }) {
   return (
-    <div className="p-5 rounded-xl border border-[#e5e7eb] bg-white">
-      <p className="text-sm text-[#5f6368]">{label}</p>
+    <div className="p-5 rounded-2xl border bg-white shadow-sm">
+      <p className="text-sm text-[#5f6368]">{title}</p>
 
-      <div className="mt-3 flex justify-between text-lg font-semibold">
-        <span style={{ color: "#EA4335" }}>
-          A: {a}{suffix}
-        </span>
+      <div className="mt-3 flex justify-between items-end">
+        <div>
+          <p className="text-xs text-[#5f6368]">A</p>
+          <p className="text-xl font-bold text-[#EA4335]">
+            {a}{suffix}
+          </p>
+        </div>
 
-        <span style={{ color: "#34A853" }}>
-          B: {b}{suffix}
-        </span>
+        <div>
+          <p className="text-xs text-[#5f6368]">B</p>
+          <p className="text-xl font-bold text-[#34A853]">
+            {b}{suffix}
+          </p>
+        </div>
       </div>
     </div>
   );
