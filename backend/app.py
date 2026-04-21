@@ -6,9 +6,19 @@ from flask import Flask, jsonify, request
 import pandas as pd
 from flask_cors import CORS
 
-app = Flask(__name__)
-CORS(app)
+# PDF
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from io import BytesIO
 
+app = Flask(__name__)
+
+# ✅ FIXED CORS
+CORS(
+    app,
+    resources={r"/*": {"origins": "*"}},
+    supports_credentials=True
+)
 
 # ---------- HOME ----------
 @app.route("/")
@@ -16,44 +26,42 @@ def home():
     return "Backend is running"
 
 
-# ---------- AI EXPLANATION (RULE-BASED) ----------
+# ---------- AI EXPLANATION ----------
 @app.route("/explain", methods=["POST"])
 def explain():
     data = request.json
-
     parity = data.get("parity", 0)
-    gap = data.get("approval_gap", 0)
 
     if parity < 0.6:
-        explanation = f"""
+        explanation = """
 Strong bias detected.
 
-One group has significantly lower approval rates than others.
-This usually happens due to imbalanced training data or biased features.
+One group has significantly lower approval rates.
+Likely due to imbalanced training data or biased features.
 
 Fix:
-- Balance dataset across groups
-- Remove sensitive proxy features (like zip code)
-- Apply fairness constraints in model
+- Balance dataset
+- Remove proxy features
+- Apply fairness constraints
 """
     elif parity < 0.8:
-        explanation = f"""
+        explanation = """
 Moderate bias detected.
 
-There is noticeable difference in approval rates.
+Approval rates differ noticeably.
 
 Fix:
 - Reweight dataset
-- Tune decision thresholds
-- Monitor fairness continuously
+- Adjust thresholds
+- Monitor fairness
 """
     else:
-        explanation = f"""
+        explanation = """
 Model appears fair.
 
-Approval rates are similar across groups.
+Approval rates are consistent across groups.
 
-Keep monitoring to avoid drift.
+Continue monitoring.
 """
 
     return jsonify({
@@ -126,6 +134,56 @@ def upload_file():
     except Exception as error:
         print("Upload Error:", error)
         return jsonify({"error": str(error)}), 500
+
+
+# ---------- DOWNLOAD REPORT ----------
+@app.route("/download-report", methods=["POST", "OPTIONS"])
+def download_report():
+
+    # ✅ Handle preflight (CORS fix)
+    if request.method == "OPTIONS":
+        return '', 200
+
+    data = request.json
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer)
+
+    styles = getSampleStyleSheet()
+    content = []
+
+    # Title
+    content.append(Paragraph("Ethicly Fairness Report", styles["Title"]))
+    content.append(Spacer(1, 12))
+
+    # Summary
+    content.append(Paragraph(f"Fairness Score: {data.get('fairness_score')}/100", styles["Normal"]))
+    content.append(Paragraph(f"Parity: {data.get('parity')}", styles["Normal"]))
+    content.append(Paragraph(f"Approval Gap: {data.get('approval_gap')}", styles["Normal"]))
+    content.append(Paragraph(f"Verdict: {data.get('verdict')}", styles["Normal"]))
+
+    content.append(Spacer(1, 12))
+
+    # Group rates
+    content.append(Paragraph("Group Approval Rates:", styles["Heading2"]))
+
+    for group, rate in data.get("group_rates", {}).items():
+        content.append(
+            Paragraph(f"{group}: {round(rate * 100, 2)}%", styles["Normal"])
+        )
+
+    doc.build(content)
+    buffer.seek(0)
+
+    return (
+        buffer.read(),
+        200,
+        {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": "attachment; filename=ethicly_report.pdf",
+            "Access-Control-Allow-Origin": "*"
+        },
+    )
 
 
 # ---------- HELPER ----------

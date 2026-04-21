@@ -4,6 +4,7 @@ import EmptyState from "../components/EmptyState.jsx";
 import PageShell from "../components/PageShell.jsx";
 import MetricCard from "../components/MetricCard.jsx";
 import { useAudit } from "../services/AuditContext.jsx";
+import { downloadReport } from "../services/report.js";
 
 export default function ReportPage() {
   const { audit, dataset } = useAudit();
@@ -25,7 +26,9 @@ export default function ReportPage() {
   return (
     <PageShell className="pb-16 overflow-x-hidden">
       <div className="mb-8 max-w-3xl">
-        <p className="text-sm font-semibold text-google-blue">Reviewer report</p>
+        <p className="text-sm font-semibold text-google-blue">
+          Reviewer report
+        </p>
         <h1 className="mt-2 text-3xl font-bold text-[#202124] sm:text-4xl">
           Fairness report
         </h1>
@@ -35,7 +38,8 @@ export default function ReportPage() {
       </div>
 
       <Card className="space-y-6">
-        <div className="flex flex-col gap-3 border-b border-[#e5e7eb] pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 border-b border-[#e5e7eb] pb-5 sm:flex-row sm:items-center sm:justify-between">
+          
           <div>
             <h2 className="text-xl font-bold text-[#202124]">
               Ethicly audit summary
@@ -46,12 +50,23 @@ export default function ReportPage() {
             </p>
           </div>
 
-          <Button to="/dashboard" variant="secondary">
-            Back to Dashboard
-          </Button>
+          {/* 🔥 BUTTON GROUP */}
+          <div className="flex gap-3">
+            <Button
+              onClick={() => downloadReport(audit)}
+              variant="primary"
+            >
+              Download Report
+            </Button>
+
+            <Button to="/dashboard" variant="secondary">
+              Back to Dashboard
+            </Button>
+          </div>
+
         </div>
 
-        {/* ✅ FIXED RESPONSIVE GRID */}
+        {/* METRICS */}
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard
             label="Bias verdict"
@@ -80,7 +95,7 @@ export default function ReportPage() {
           />
         </div>
 
-        {/* ✅ INTERPRETATION */}
+        {/* INTERPRETATION */}
         <div className="rounded-xl border border-[#e5e7eb] bg-white p-5">
           <h3 className="text-lg font-semibold text-[#202124]">
             Interpretation
@@ -93,7 +108,7 @@ export default function ReportPage() {
           </p>
         </div>
 
-        {/* ✅ INSIGHTS */}
+        {/* INSIGHTS */}
         <div className="text-sm text-[#5f6368] space-y-1">
           <p>• Parity close to 1 indicates fairness</p>
           <p>• Large approval gap indicates bias risk</p>
