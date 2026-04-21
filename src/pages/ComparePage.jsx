@@ -1,11 +1,16 @@
 import { useState } from "react";
-import PageShell from "../components/PageShell.jsx";
-import Card from "../components/Card.jsx";
-import ComparisonChart from "../components/charts/ComparisonChart.jsx";
+import PageShell from "../components/PageShell";
+import Card from "../components/Card";
+import ComparisonChart from "../components/charts/ComparisonChart";
 
 export default function ComparePage() {
+  const [fileA, setFileA] = useState(null);
+  const [fileB, setFileB] = useState(null);
+
   const [auditA, setAuditA] = useState(null);
   const [auditB, setAuditB] = useState(null);
+
+  const [loading, setLoading] = useState(false);
 
   const uploadFile = async (file, setter) => {
     const formData = new FormData();
@@ -20,6 +25,15 @@ export default function ComparePage() {
     if (!data.error) setter(data);
   };
 
+  const handleCompare = async () => {
+    if (!fileA || !fileB) return;
+
+    setLoading(true);
+    await uploadFile(fileA, setAuditA);
+    await uploadFile(fileB, setAuditB);
+    setLoading(false);
+  };
+
   const improvement =
     auditA && auditB
       ? auditB.fairness_score - auditA.fairness_score
@@ -31,23 +45,36 @@ export default function ComparePage() {
 
         {/* 🔥 HERO */}
         <div>
-          <h1 className="text-4xl font-bold text-[#202124]">
+          <h1 className="text-4xl font-bold text-black">
             Model Comparison
           </h1>
           <p className="text-[#5f6368] mt-2">
-            Compare fairness performance across datasets
+            Compare fairness using statistical metrics (parity, gap, p-value)
           </p>
         </div>
 
         {/* 🔥 Upload */}
         <div className="grid md:grid-cols-2 gap-6">
-          <Upload title="Dataset A" onUpload={(f) => uploadFile(f, setAuditA)} />
-          <Upload title="Dataset B" onUpload={(f) => uploadFile(f, setAuditB)} />
+          <Upload title="Dataset A" onSelect={setFileA} />
+          <Upload title="Dataset B" onSelect={setFileB} />
         </div>
 
+        {/* 🔥 Compare Button */}
+        <div className="flex justify-center">
+          <button
+            onClick={handleCompare}
+            disabled={!fileA || !fileB || loading}
+            className={`px-8 py-3 rounded-xl font-semibold text-white transition 
+            ${loading ? "bg-gray-400" : "bg-[#4285F4] hover:bg-[#3367d6]"}`}
+          >
+            {loading ? "Comparing..." : "Compare"}
+          </button>
+        </div>
+
+        {/* 🔥 RESULT */}
         {auditA && auditB && (
           <>
-            {/* 🔥 IMPROVEMENT HERO */}
+            {/* 🔥 Improvement */}
             <div className="rounded-2xl p-6 bg-gradient-to-r from-[#4285F4]/10 to-[#34A853]/10 border">
               <p className="text-sm text-[#5f6368]">Fairness Improvement</p>
               <h2
@@ -61,41 +88,47 @@ export default function ComparePage() {
               </h2>
             </div>
 
-            {/* 🔥 MAIN GRAPH */}
+            {/* 🔥 Graph */}
             <Card className="p-6">
-              <h2 className="text-lg font-semibold mb-4">
+              <h2 className="text-lg font-semibold mb-4 text-[#4285F4]">
                 Performance Overview
               </h2>
               <ComparisonChart auditA={auditA} auditB={auditB} />
             </Card>
 
-            {/* 🔥 KPI GRID */}
+            {/* 🔥 KPI */}
             <div className="grid md:grid-cols-3 gap-6">
-
-              <KPI
-                title="Fairness Score"
-                a={auditA.fairness_score}
-                b={auditB.fairness_score}
-              />
-
-              <KPI
-                title="Parity"
-                a={auditA.parity.toFixed(2)}
-                b={auditB.parity.toFixed(2)}
-              />
-
+              <KPI title="Fairness Score" a={auditA.fairness_score} b={auditB.fairness_score} />
+              <KPI title="Parity" a={auditA.parity.toFixed(2)} b={auditB.parity.toFixed(2)} />
               <KPI
                 title="Approval Gap"
                 a={(auditA.approval_gap * 100).toFixed(1)}
                 b={(auditB.approval_gap * 100).toFixed(1)}
                 suffix="%"
               />
-
             </div>
 
-            {/* 🔥 VERDICT SECTION */}
+            {/* 🔥 Statistical Insight */}
             <Card className="p-6">
-              <h2 className="text-lg font-semibold mb-4">
+              <h2 className="text-lg font-semibold mb-4 text-[#FBBC05]">
+                Statistical Insight
+              </h2>
+
+              <p className="text-sm text-[#5f6368]">
+                Dataset A P-value: <b>{auditA.p_value}</b><br />
+                Dataset B P-value: <b>{auditB.p_value}</b>
+              </p>
+
+              <p className="mt-3 text-sm">
+                {(auditA.p_value < 0.05 || auditB.p_value < 0.05)
+                  ? "⚠ Statistically significant bias detected"
+                  : "✔ No statistically significant bias detected"}
+              </p>
+            </Card>
+
+            {/* 🔥 Verdict */}
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold mb-4 text-[#FBBC05]">
                 Bias Transition
               </h2>
 
@@ -122,7 +155,6 @@ export default function ComparePage() {
 
           </>
         )}
-
       </div>
     </PageShell>
   );
@@ -130,14 +162,14 @@ export default function ComparePage() {
 
 /* ---------- Upload ---------- */
 
-function Upload({ title, onUpload }) {
+function Upload({ title, onSelect }) {
   return (
     <Card className="p-6">
-      <p className="font-semibold mb-3">{title}</p>
+      <p className="font-semibold mb-3 text-[#4285F4]">{title}</p>
       <input
         type="file"
         accept=".csv"
-        onChange={(e) => onUpload(e.target.files[0])}
+        onChange={(e) => onSelect(e.target.files[0])}
       />
     </Card>
   );
