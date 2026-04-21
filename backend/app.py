@@ -7,18 +7,25 @@ import pandas as pd
 from flask_cors import CORS
 
 # PDF
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+)
+from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+from reportlab.graphics.shapes import Drawing, Circle
+from reportlab.graphics.charts.barcharts import VerticalBarChart
 from io import BytesIO
+from datetime import datetime
+
+# NEW
+from scipy.stats import chi2_contingency
 
 app = Flask(__name__)
 
-# ✅ FIXED CORS
-CORS(
-    app,
-    resources={r"/*": {"origins": "*"}},
-    supports_credentials=True
-)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+
 
 # ---------- HOME ----------
 @app.route("/")
@@ -26,47 +33,73 @@ def home():
     return "Backend is running"
 
 
+# ---------- HELPER FUNCTIONS ----------
+
+def find_sensitive_column(columns):
+    sensitive = {"gender", "sex", "race", "age"}
+    for col in columns:
+        if col.lower() in sensitive:
+            return col
+    return None
+
+
+def chi_square_test(df, group_col, target_col):
+    contingency = pd.crosstab(df[group_col], df[target_col])
+    chi2, p, dof, expected = chi2_contingency(contingency)
+
+    return {
+        "chi2": float(chi2),
+        "p_value": float(p),
+        "significant": p < 0.05
+    }
+
+
+def disparate_impact(group_rates):
+    values = list(group_rates.values())
+    if not values or max(values) == 0:
+        return 1.0
+    return min(values) / max(values)
+
+
 # ---------- AI EXPLANATION ----------
 @app.route("/explain", methods=["POST"])
 def explain():
     data = request.json
+
     parity = data.get("parity", 0)
+    p_value = data.get("p_value", 1)
 
-    if parity < 0.6:
+    if p_value < 0.05 and parity < 0.8:
         explanation = """
-Strong bias detected.
+Statistically significant bias detected.
 
-One group has significantly lower approval rates.
-Likely due to imbalanced training data or biased features.
+Differences in approval rates are unlikely due to chance.
 
 Fix:
-- Balance dataset
+- Rebalance dataset
 - Remove proxy features
-- Apply fairness constraints
+- Apply fairness-aware models
 """
     elif parity < 0.8:
         explanation = """
-Moderate bias detected.
+Potential bias detected.
 
-Approval rates differ noticeably.
+Differences exist but are not statistically significant.
 
 Fix:
-- Reweight dataset
-- Adjust thresholds
-- Monitor fairness
+- Collect more data
+- Monitor fairness metrics
 """
     else:
         explanation = """
 Model appears fair.
 
-Approval rates are consistent across groups.
-
-Continue monitoring.
+No statistically significant bias detected.
 """
 
     return jsonify({
         "explanation": explanation.strip(),
-        "source": "rule-based"
+        "source": "statistical + rule-based"
     })
 
 
@@ -82,9 +115,6 @@ def upload_file():
     try:
         df = pd.read_csv(file)
         columns = df.columns.tolist()
-
-        if not columns:
-            return jsonify({"error": "CSV has no columns"}), 400
 
         target_column = columns[-1]
         sensitive_column = find_sensitive_column(columns)
@@ -104,6 +134,7 @@ def upload_file():
         if audit_df.empty:
             return jsonify({"error": "No valid rows"}), 400
 
+        # -------- GROUP RATES --------
         group_rates = audit_df.groupby(sensitive_column)[target_column].mean().to_dict()
         group_rates = {str(k): float(v) for k, v in group_rates.items()}
 
@@ -114,25 +145,44 @@ def upload_file():
         parity = 1.0 if max_rate == 0 else min_rate / max_rate
         approval_gap = max_rate - min_rate
 
+        # -------- NEW: STATS --------
+        chi_result = chi_square_test(audit_df, sensitive_column, target_column)
+        p_value = chi_result["p_value"]
+
+        dir_ratio = disparate_impact(group_rates)
+
+        # -------- VERDICT --------
+        if p_value < 0.05 and parity < 0.8:
+            verdict = "Biased (Statistically Significant)"
+        elif parity < 0.8:
+            verdict = "Potential Bias"
+        else:
+            verdict = "Fair"
+
         fairness_score = int(round(parity * 100))
-        verdict = "Biased" if parity < 0.8 else "Unbiased"
 
         preview_df = df.where(pd.notna(df), None)
 
         return jsonify({
             "columns": columns,
             "rows_preview": preview_df.head(5).to_dict(orient="records"),
-            "group_rates": group_rates,
-            "parity": round(parity, 4),
-            "approval_gap": round(approval_gap, 4),
-            "fairness_score": fairness_score,
-            "verdict": verdict,
-            "target_column": target_column,
-            "sensitive_column": sensitive_column
+
+            "group_rates": {k: float(v) for k, v in group_rates.items()},
+            "parity": float(round(parity, 4)),
+            "approval_gap": float(round(approval_gap, 4)),
+            "fairness_score": int(fairness_score),
+
+            "p_value": float(round(p_value, 6)),
+            "statistical_significance": bool(chi_result["significant"]),
+            "disparate_impact_ratio": float(round(dir_ratio, 4)),
+
+            "verdict": str(verdict),
+
+            "target_column": str(target_column),
+            "sensitive_column": str(sensitive_column)
         })
 
     except Exception as error:
-        print("Upload Error:", error)
         return jsonify({"error": str(error)}), 500
 
 
@@ -140,37 +190,85 @@ def upload_file():
 @app.route("/download-report", methods=["POST", "OPTIONS"])
 def download_report():
 
-    # ✅ Handle preflight (CORS fix)
     if request.method == "OPTIONS":
         return '', 200
 
     data = request.json
 
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer)
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
 
     styles = getSampleStyleSheet()
     content = []
 
-    # Title
-    content.append(Paragraph("Ethicly Fairness Report", styles["Title"]))
+    # LOGO
+    logo = Drawing(60, 40)
+    logo.add(Circle(30, 25, 6, fillColor=colors.HexColor("#4285F4")))
+    logo.add(Circle(42, 25, 6, fillColor=colors.HexColor("#34A853")))
+    logo.add(Circle(18, 25, 6, fillColor=colors.HexColor("#FBBC05")))
+    logo.add(Circle(30, 13, 6, fillColor=colors.HexColor("#EA4335")))
+
+    content.append(logo)
+    content.append(Spacer(1, 6))
+
+    # HEADER
+    content.append(Paragraph("<b>Ethicly Fairness Report</b>", styles["Title"]))
+    content.append(Spacer(1, 10))
+
+    content.append(Paragraph(
+        f"Generated: {datetime.now().strftime('%d %b %Y, %H:%M')}",
+        styles["Normal"]
+    ))
+
     content.append(Spacer(1, 12))
 
-    # Summary
-    content.append(Paragraph(f"Fairness Score: {data.get('fairness_score')}/100", styles["Normal"]))
-    content.append(Paragraph(f"Parity: {data.get('parity')}", styles["Normal"]))
-    content.append(Paragraph(f"Approval Gap: {data.get('approval_gap')}", styles["Normal"]))
-    content.append(Paragraph(f"Verdict: {data.get('verdict')}", styles["Normal"]))
+    # TABLE
+    table_data = [
+        ["Metric", "Value"],
+        ["Fairness Score", f"{data['fairness_score']}/100"],
+        ["Parity", str(data["parity"])],
+        ["Approval Gap", str(data["approval_gap"])],
+        ["P-Value", str(data["p_value"])],
+        ["Statistical Significance", str(data["statistical_significance"])],
+        ["Disparate Impact Ratio", str(data["disparate_impact_ratio"])],
+    ]
 
-    content.append(Spacer(1, 12))
+    table = Table(table_data)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4285F4")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
 
-    # Group rates
-    content.append(Paragraph("Group Approval Rates:", styles["Heading2"]))
+    content.append(table)
+    content.append(Spacer(1, 20))
 
-    for group, rate in data.get("group_rates", {}).items():
-        content.append(
-            Paragraph(f"{group}: {round(rate * 100, 2)}%", styles["Normal"])
-        )
+    # VERDICT
+    color = "red" if "Biased" in data["verdict"] else "green"
+    content.append(Paragraph(
+        f"<b>Verdict:</b> <font color='{color}'>{data['verdict']}</font>",
+        styles["Heading2"]
+    ))
+
+    content.append(Spacer(1, 20))
+
+    # GRAPH
+    drawing = Drawing(400, 200)
+    bc = VerticalBarChart()
+    bc.x = 50
+    bc.y = 40
+    bc.height = 120
+    bc.width = 300
+
+    groups = list(data["group_rates"].keys())
+    values = [v * 100 for v in data["group_rates"].values()]
+
+    bc.data = [values]
+    bc.categoryAxis.categoryNames = groups
+    bc.bars[0].fillColor = colors.HexColor("#4285F4")
+
+    drawing.add(bc)
+    content.append(drawing)
 
     doc.build(content)
     buffer.seek(0)
@@ -181,20 +279,8 @@ def download_report():
         {
             "Content-Type": "application/pdf",
             "Content-Disposition": "attachment; filename=ethicly_report.pdf",
-            "Access-Control-Allow-Origin": "*"
         },
     )
-
-
-# ---------- HELPER ----------
-def find_sensitive_column(columns):
-    sensitive = {"gender", "sex", "race", "age"}
-
-    for col in columns:
-        if col.lower() in sensitive:
-            return col
-
-    return None
 
 
 # ---------- RUN ----------
