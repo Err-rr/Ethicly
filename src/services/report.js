@@ -1,6 +1,6 @@
 export async function downloadReport(audit) {
   try {
-    const res = await fetch("http://127.0.0.1:5000/download-report", {
+    const res = await fetch("https://ethicaly.onrender.com/download-report", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
