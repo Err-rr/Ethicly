@@ -19,21 +19,17 @@ from reportlab.graphics.charts.barcharts import VerticalBarChart
 from io import BytesIO
 from datetime import datetime
 
-# NEW
 from scipy.stats import chi2_contingency
 
 app = Flask(__name__)
 
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+CORS(app)
 
 
-# ---------- HOME ----------
 @app.route("/")
 def home():
     return "Backend is running"
 
-
-# ---------- HELPER FUNCTIONS ----------
 
 def find_sensitive_column(columns):
     sensitive = {"gender", "sex", "race", "age"}
@@ -61,7 +57,6 @@ def disparate_impact(group_rates):
     return min(values) / max(values)
 
 
-# ---------- AI EXPLANATION ----------
 @app.route("/explain", methods=["POST"])
 def explain():
     data = request.json
@@ -103,7 +98,6 @@ No statistically significant bias detected.
     })
 
 
-# ---------- CSV UPLOAD ----------
 @app.route("/upload", methods=["POST"])
 def upload_file():
 
@@ -134,7 +128,6 @@ def upload_file():
         if audit_df.empty:
             return jsonify({"error": "No valid rows"}), 400
 
-        # -------- GROUP RATES --------
         group_rates = audit_df.groupby(sensitive_column)[target_column].mean().to_dict()
         group_rates = {str(k): float(v) for k, v in group_rates.items()}
 
@@ -145,13 +138,11 @@ def upload_file():
         parity = 1.0 if max_rate == 0 else min_rate / max_rate
         approval_gap = max_rate - min_rate
 
-        # -------- NEW: STATS --------
         chi_result = chi_square_test(audit_df, sensitive_column, target_column)
         p_value = chi_result["p_value"]
 
         dir_ratio = disparate_impact(group_rates)
 
-        # -------- VERDICT --------
         if p_value < 0.05 and parity < 0.8:
             verdict = "Biased (Statistically Significant)"
         elif parity < 0.8:
@@ -166,18 +157,14 @@ def upload_file():
         return jsonify({
             "columns": columns,
             "rows_preview": preview_df.head(5).to_dict(orient="records"),
-
             "group_rates": {k: float(v) for k, v in group_rates.items()},
             "parity": float(round(parity, 4)),
             "approval_gap": float(round(approval_gap, 4)),
             "fairness_score": int(fairness_score),
-
             "p_value": float(round(p_value, 6)),
             "statistical_significance": bool(chi_result["significant"]),
             "disparate_impact_ratio": float(round(dir_ratio, 4)),
-
             "verdict": str(verdict),
-
             "target_column": str(target_column),
             "sensitive_column": str(sensitive_column)
         })
@@ -186,7 +173,6 @@ def upload_file():
         return jsonify({"error": str(error)}), 500
 
 
-# ---------- DOWNLOAD REPORT ----------
 @app.route("/download-report", methods=["POST", "OPTIONS"])
 def download_report():
 
@@ -202,7 +188,6 @@ def download_report():
     content = []
 
     from reportlab.graphics.shapes import Drawing, Circle, String, Rect
-    from reportlab.lib import colors
     from reportlab.platypus import Table, TableStyle, Paragraph, Spacer
     from reportlab.graphics.charts.barcharts import VerticalBarChart
 
@@ -316,6 +301,5 @@ def download_report():
     )
 
 
-# ---------- RUN ----------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
