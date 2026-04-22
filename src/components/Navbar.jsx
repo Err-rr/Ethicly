@@ -13,6 +13,7 @@ const navItems = [
 export default function Navbar({ user }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const profileRef = useRef(null);
   const navigate = useNavigate();
 
@@ -66,15 +67,13 @@ export default function Navbar({ user }) {
     >
       <nav className="page-shell flex min-h-16 items-center justify-between gap-4">
 
-        {/* 🔥 LOGO */}
+        {/* LOGO */}
         <NavLink to="/" className="flex items-center gap-3 text-lg font-bold text-[#202124]">
-
           <motion.span
             whileHover={{ scale: 1.06 }}
             transition={{ duration: 0.2 }}
             className="grid size-10 place-items-center rounded-xl bg-white shadow-card ring-1 ring-[#e8eaed]"
           >
-            {/* 🔥 Updated Logo */}
             <div className="relative w-5 h-5">
               <div className="absolute w-2.5 h-2.5 bg-[#4285F4] rounded-full top-0 left-1/2 -translate-x-1/2" />
               <div className="absolute w-2.5 h-2.5 bg-[#34A853] rounded-full right-0 top-1/2 -translate-y-1/2" />
@@ -82,12 +81,11 @@ export default function Navbar({ user }) {
               <div className="absolute w-2.5 h-2.5 bg-[#EA4335] rounded-full bottom-0 left-1/2 -translate-x-1/2" />
             </div>
           </motion.span>
-
           Ethicly
         </NavLink>
 
-        {/* 🔥 NAV ITEMS */}
-        <div className="flex items-center gap-1 rounded-xl bg-white/55 p-1 ring-1 ring-[#e8eaed]/80">
+        {/* DESKTOP NAV */}
+        <div className="hidden md:flex items-center gap-1 rounded-xl bg-white/55 p-1 ring-1 ring-[#e8eaed]/80">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -104,65 +102,102 @@ export default function Navbar({ user }) {
           ))}
         </div>
 
-        {/* 🔥 PROFILE */}
-        {user ? (
-          <div ref={profileRef} className="relative">
-            <button
-              onClick={() => setIsProfileOpen((prev) => !prev)}
-              className="grid size-10 place-items-center overflow-hidden rounded-full bg-white text-sm font-bold text-[#4285F4] shadow-card ring-1 ring-[#dadce0] transition duration-200 hover:scale-[1.05]"
-            >
-              {user.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt=""
-                  className="size-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                avatarLetter
-              )}
-            </button>
+        {/* RIGHT SIDE */}
+        <div className="flex items-center gap-3">
 
-            <AnimatePresence>
-              {isProfileOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                  transition={{ duration: 0.16 }}
-                  className="absolute right-0 z-[1000] mt-3 w-72 rounded-xl border border-[#e8eaed] bg-white p-3 shadow-soft"
-                >
-                  <div className="flex items-center gap-3 pb-3">
-                    <div className="grid size-10 place-items-center rounded-full bg-[#edf4ff] text-sm font-bold text-[#4285F4]">
-                      {avatarLetter}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[#202124]">{displayName}</p>
-                      <p className="text-xs text-[#5f6368]">{user.email}</p>
-                    </div>
-                  </div>
-
-                  <div className="h-px bg-[#e8eaed]" />
-
-                  <button
-                    onClick={handleLogout}
-                    className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#EA4335] hover:bg-[#f8fafd]"
-                  >
-                    Logout
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        ) : (
-          <NavLink
-            to="/auth"
-            className="hidden sm:inline-flex rounded-lg px-4 py-2 text-sm font-semibold text-[#4285F4] ring-1 ring-[#d8e7ff] hover:bg-[#edf4ff]"
+          {/* MOBILE MENU BUTTON */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="md:hidden p-2 rounded-lg border border-[#e8eaed]"
           >
-            Sign in
-          </NavLink>
-        )}
+            ☰
+          </button>
+
+          {/* PROFILE */}
+          {user ? (
+            <div ref={profileRef} className="relative">
+              <button
+                onClick={() => setIsProfileOpen((prev) => !prev)}
+                className="grid size-10 place-items-center overflow-hidden rounded-full bg-white text-sm font-bold text-[#4285F4] shadow-card ring-1 ring-[#dadce0] transition duration-200 hover:scale-[1.05]"
+              >
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt=""
+                    className="size-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  avatarLetter
+                )}
+              </button>
+
+              <AnimatePresence>
+                {isProfileOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                    transition={{ duration: 0.16 }}
+                    className="absolute right-0 z-[1000] mt-3 w-72 rounded-xl border border-[#e8eaed] bg-white p-3 shadow-soft"
+                  >
+                    <div className="flex items-center gap-3 pb-3">
+                      <div className="grid size-10 place-items-center rounded-full bg-[#edf4ff] text-sm font-bold text-[#4285F4]">
+                        {avatarLetter}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#202124]">{displayName}</p>
+                        <p className="text-xs text-[#5f6368]">{user.email}</p>
+                      </div>
+                    </div>
+
+                    <div className="h-px bg-[#e8eaed]" />
+
+                    <button
+                      onClick={handleLogout}
+                      className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#EA4335] hover:bg-[#f8fafd]"
+                    >
+                      Logout
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <NavLink
+              to="/auth"
+              className="hidden sm:inline-flex rounded-lg px-4 py-2 text-sm font-semibold text-[#4285F4] ring-1 ring-[#d8e7ff] hover:bg-[#edf4ff]"
+            >
+              Sign in
+            </NavLink>
+          )}
+        </div>
       </nav>
+
+      {/* MOBILE DROPDOWN */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="md:hidden px-6 pb-4"
+          >
+            <div className="flex flex-col gap-2 rounded-xl bg-white p-3 shadow-card ring-1 ring-[#e8eaed]">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="px-3 py-2 rounded-lg text-sm font-medium text-[#202124] hover:bg-[#edf4ff]"
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
