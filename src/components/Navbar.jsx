@@ -8,7 +8,6 @@ const navItems = [
   { label: "Dashboard", to: "/dashboard" },
   { label: "Report", to: "/report" },
   { label: "Compare", to: "/compare" }
-  
 ];
 
 export default function Navbar({ user }) {
@@ -16,22 +15,19 @@ export default function Navbar({ user }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef(null);
   const navigate = useNavigate();
+
   const displayName = user?.name || user?.email?.split("@")[0] || "User";
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
   useEffect(() => {
     const updateScrollState = () => setIsScrolled(window.scrollY > 8);
-
     updateScrollState();
     window.addEventListener("scroll", updateScrollState, { passive: true });
-
     return () => window.removeEventListener("scroll", updateScrollState);
   }, []);
 
   useEffect(() => {
-    if (!isProfileOpen) {
-      return undefined;
-    }
+    if (!isProfileOpen) return;
 
     const handleOutsideClick = (event) => {
       if (!profileRef.current?.contains(event.target)) {
@@ -69,17 +65,28 @@ export default function Navbar({ user }) {
       }`}
     >
       <nav className="page-shell flex min-h-16 items-center justify-between gap-4">
+
+        {/* 🔥 LOGO */}
         <NavLink to="/" className="flex items-center gap-3 text-lg font-bold text-[#202124]">
+
           <motion.span
-            whileHover={{ scale: 1.04 }}
-            transition={{ duration: 0.18 }}
+            whileHover={{ scale: 1.06 }}
+            transition={{ duration: 0.2 }}
             className="grid size-10 place-items-center rounded-xl bg-white shadow-card ring-1 ring-[#e8eaed]"
           >
-            <span className="size-4 rounded-full bg-google-blue shadow-[12px_0_0_#34A853,-12px_0_0_#FBBC05,0_12px_0_#EA4335]" />
+            {/* 🔥 Updated Logo */}
+            <div className="relative w-5 h-5">
+              <div className="absolute w-2.5 h-2.5 bg-[#4285F4] rounded-full top-0 left-1/2 -translate-x-1/2" />
+              <div className="absolute w-2.5 h-2.5 bg-[#34A853] rounded-full right-0 top-1/2 -translate-y-1/2" />
+              <div className="absolute w-2.5 h-2.5 bg-[#FBBC05] rounded-full left-0 top-1/2 -translate-y-1/2" />
+              <div className="absolute w-2.5 h-2.5 bg-[#EA4335] rounded-full bottom-0 left-1/2 -translate-x-1/2" />
+            </div>
           </motion.span>
+
           Ethicly
         </NavLink>
 
+        {/* 🔥 NAV ITEMS */}
         <div className="flex items-center gap-1 rounded-xl bg-white/55 p-1 ring-1 ring-[#e8eaed]/80">
           {navItems.map((item) => (
             <NavLink
@@ -87,26 +94,30 @@ export default function Navbar({ user }) {
               to={item.to}
               className={({ isActive }) =>
                 `group relative rounded-lg px-3 py-2 text-sm font-medium transition duration-200 ${
-                  isActive ? "text-google-blue" : "text-[#5f6368] hover:text-[#202124]"
+                  isActive ? "text-[#4285F4]" : "text-[#5f6368] hover:text-[#202124]"
                 }`
               }
             >
               {item.label}
-              <span className="absolute inset-x-3 bottom-1 h-0.5 origin-left scale-x-0 rounded-full bg-google-blue transition duration-200 group-hover:scale-x-100" />
+              <span className="absolute inset-x-3 bottom-1 h-0.5 origin-left scale-x-0 rounded-full bg-[#4285F4] transition duration-200 group-hover:scale-x-100" />
             </NavLink>
           ))}
         </div>
+
+        {/* 🔥 PROFILE */}
         {user ? (
           <div ref={profileRef} className="relative">
             <button
-              type="button"
-              onClick={() => setIsProfileOpen((current) => !current)}
-              className="grid size-10 place-items-center overflow-hidden rounded-full bg-white text-sm font-bold text-google-blue shadow-card ring-1 ring-[#dadce0] transition duration-200 hover:scale-[1.04] hover:ring-google-blue"
-              aria-label="Open profile menu"
-              aria-expanded={isProfileOpen}
+              onClick={() => setIsProfileOpen((prev) => !prev)}
+              className="grid size-10 place-items-center overflow-hidden rounded-full bg-white text-sm font-bold text-[#4285F4] shadow-card ring-1 ring-[#dadce0] transition duration-200 hover:scale-[1.05]"
             >
               {user.photoURL ? (
-                <img src={user.photoURL} alt="" className="size-full object-cover" referrerPolicy="no-referrer" />
+                <img
+                  src={user.photoURL}
+                  alt=""
+                  className="size-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
               ) : (
                 avatarLetter
               )}
@@ -115,32 +126,27 @@ export default function Navbar({ user }) {
             <AnimatePresence>
               {isProfileOpen && (
                 <motion.div
-                  onClick={(event) => event.stopPropagation()}
-                  onMouseDown={(event) => event.stopPropagation()}
                   initial={{ opacity: 0, y: -6, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -6, scale: 0.98 }}
                   transition={{ duration: 0.16 }}
-                  className="absolute right-0 z-[1000] mt-3 w-72 origin-top-right overflow-hidden rounded-xl border border-[#e8eaed] bg-white p-3 shadow-soft"
+                  className="absolute right-0 z-[1000] mt-3 w-72 rounded-xl border border-[#e8eaed] bg-white p-3 shadow-soft"
                 >
-                  <div className="flex items-center gap-3 px-1 pb-3">
-                    <div className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[#edf4ff] text-sm font-bold text-google-blue ring-1 ring-[#d8e7ff]">
-                      {user.photoURL ? (
-                        <img src={user.photoURL} alt="" className="size-full object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        avatarLetter
-                      )}
+                  <div className="flex items-center gap-3 pb-3">
+                    <div className="grid size-10 place-items-center rounded-full bg-[#edf4ff] text-sm font-bold text-[#4285F4]">
+                      {avatarLetter}
                     </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[#202124]">{displayName}</p>
-                      <p className="mt-0.5 truncate text-xs text-[#5f6368]">{user.email}</p>
+                    <div>
+                      <p className="text-sm font-semibold text-[#202124]">{displayName}</p>
+                      <p className="text-xs text-[#5f6368]">{user.email}</p>
                     </div>
                   </div>
+
                   <div className="h-px bg-[#e8eaed]" />
+
                   <button
-                    type="button"
                     onClick={handleLogout}
-                    className="mt-2 w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-google-red transition duration-200 hover:bg-[#f8fafd]"
+                    className="mt-2 w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#EA4335] hover:bg-[#f8fafd]"
                   >
                     Logout
                   </button>
@@ -151,13 +157,7 @@ export default function Navbar({ user }) {
         ) : (
           <NavLink
             to="/auth"
-            className={({ isActive }) =>
-              `hidden rounded-lg px-4 py-2 text-sm font-semibold transition duration-200 sm:inline-flex ${
-                isActive
-                  ? "bg-google-blue text-white shadow-card"
-                  : "text-google-blue ring-1 ring-[#d8e7ff] hover:bg-[#edf4ff]"
-              }`
-            }
+            className="hidden sm:inline-flex rounded-lg px-4 py-2 text-sm font-semibold text-[#4285F4] ring-1 ring-[#d8e7ff] hover:bg-[#edf4ff]"
           >
             Sign in
           </NavLink>

@@ -201,135 +201,75 @@ def download_report():
     styles = getSampleStyleSheet()
     content = []
 
-    from reportlab.graphics.shapes import Drawing, Circle, String
-    from reportlab.lib import colors
-    from reportlab.platypus import Table, TableStyle, Paragraph, Spacer
-    from reportlab.graphics.charts.barcharts import VerticalBarChart
+    # LOGO
+    logo = Drawing(60, 40)
+    logo.add(Circle(30, 25, 6, fillColor=colors.HexColor("#4285F4")))
+    logo.add(Circle(42, 25, 6, fillColor=colors.HexColor("#34A853")))
+    logo.add(Circle(18, 25, 6, fillColor=colors.HexColor("#FBBC05")))
+    logo.add(Circle(30, 13, 6, fillColor=colors.HexColor("#EA4335")))
 
-    # =========================
-    # 🔥 LOGO + BRAND HEADER
-    # =========================
-    header = Drawing(500, 60)
+    content.append(logo)
+    content.append(Spacer(1, 6))
 
-    # Outer circle
-    header.add(Circle(30, 30, 18, strokeColor=colors.HexColor("#dadce0"), fillColor=None))
+    # HEADER
+    content.append(Paragraph("<b>Ethicly Fairness Report</b>", styles["Title"]))
+    content.append(Spacer(1, 10))
 
-    # Overlapping dots (match navbar)
-    header.add(Circle(30, 40, 6, fillColor=colors.HexColor("#4285F4")))
-    header.add(Circle(40, 30, 6, fillColor=colors.HexColor("#34A853")))
-    header.add(Circle(20, 30, 6, fillColor=colors.HexColor("#FBBC05")))
-    header.add(Circle(30, 20, 6, fillColor=colors.HexColor("#EA4335")))
+    content.append(Paragraph(
+        f"Generated: {datetime.now().strftime('%d %b %Y, %H:%M')}",
+        styles["Normal"]
+    ))
 
-    # Title text (right side)
-    header.add(String(60, 35, "Ethicly", fontSize=16, fontName="Helvetica-Bold", fillColor=colors.black))
-    header.add(String(60, 20, "Detect, Explain, and Fix AI Bias", fontSize=10, fillColor=colors.grey))
-
-    content.append(header)
     content.append(Spacer(1, 12))
 
-    # =========================
-    # 🔥 TABLE (WIDER)
-    # =========================
+    # TABLE
     table_data = [
         ["Metric", "Value"],
         ["Fairness Score", f"{data['fairness_score']}/100"],
         ["Parity", str(data["parity"])],
         ["Approval Gap", str(data["approval_gap"])],
-        ["P-Value", str(data.get("p_value", "N/A"))],
-        ["Statistical Significance", str(data.get("statistical_significance", "N/A"))],
-        ["Disparate Impact Ratio", str(data.get("disparate_impact_ratio", "N/A"))],
+        ["P-Value", str(data["p_value"])],
+        ["Statistical Significance", str(data["statistical_significance"])],
+        ["Disparate Impact Ratio", str(data["disparate_impact_ratio"])],
     ]
 
-    table = Table(table_data, colWidths=[250, 200])  # 👈 wider
-
+    table = Table(table_data)
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4285F4")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("BACKGROUND", (0, 1), (-1, -1), colors.whitesmoke),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
     ]))
 
     content.append(table)
     content.append(Spacer(1, 20))
 
-    # =========================
-    # 🔥 VERDICT
-    # =========================
-    verdict = data.get("verdict", "Unknown")
-    color = colors.red if "Biased" in verdict else colors.green
-
+    # VERDICT
+    color = "red" if "Biased" in data["verdict"] else "green"
     content.append(Paragraph(
-        f"<b>Verdict:</b> <font color='{color.hexval()}'>{verdict}</font>",
+        f"<b>Verdict:</b> <font color='{color}'>{data['verdict']}</font>",
         styles["Heading2"]
     ))
 
-    content.append(Spacer(1, 16))
+    content.append(Spacer(1, 20))
 
-    # =========================
-    # 🔥 GRAPH (CLEAR + LABELED)
-    # =========================
-    drawing = Drawing(450, 240)
+    # GRAPH
+    drawing = Drawing(400, 200)
     bc = VerticalBarChart()
-
     bc.x = 50
-    bc.y = 60
-    bc.height = 140
-    bc.width = 320
+    bc.y = 40
+    bc.height = 120
+    bc.width = 300
 
     groups = list(data["group_rates"].keys())
     values = [v * 100 for v in data["group_rates"].values()]
 
     bc.data = [values]
     bc.categoryAxis.categoryNames = groups
-
-    bc.valueAxis.valueMin = 0
-    bc.valueAxis.valueMax = 100
-    bc.valueAxis.valueStep = 20
-
     bc.bars[0].fillColor = colors.HexColor("#4285F4")
 
     drawing.add(bc)
-
-    # Graph title
-    drawing.add(String(120, 210, "Approval Rate by Group (%)", fontSize=12))
-
     content.append(drawing)
-    content.append(Spacer(1, 12))
 
-    # =========================
-    # 🔥 BIAS EXPLANATION
-    # =========================
-    parity = data.get("parity", 0)
-
-    if parity < 0.6:
-        explanation = "Strong bias: One group has significantly lower approval rates."
-        fix = "Fix: Balance dataset, remove proxy features, apply fairness constraints."
-    elif parity < 0.8:
-        explanation = "Moderate bias: Noticeable difference in approval rates."
-        fix = "Fix: Reweight data, tune thresholds, monitor fairness."
-    else:
-        explanation = "Model is fair: Approval rates are consistent across groups."
-        fix = "Continue monitoring for drift."
-
-    content.append(Paragraph(f"<b>Why bias exists:</b> {explanation}", styles["Normal"]))
-    content.append(Spacer(1, 8))
-    content.append(Paragraph(f"<b>How to fix:</b> {fix}", styles["Normal"]))
-
-    content.append(Spacer(1, 30))
-
-    # =========================
-    # 🔥 FOOTER (BOTTOM RIGHT)
-    # =========================
-    content.append(Paragraph(
-        f"<para alignment='right'><font size=8 color='#5f6368'>Generated: {datetime.now().strftime('%d %b %Y, %H:%M')}</font></para>",
-        styles["Normal"]
-    ))
-
-    # =========================
-    # BUILD
-    # =========================
     doc.build(content)
     buffer.seek(0)
 
