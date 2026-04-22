@@ -166,7 +166,7 @@ export default function Navbar({ user }) {
           ) : (
             <NavLink
               to="/auth"
-              className="hidden sm:inline-flex rounded-lg px-4 py-2 text-sm font-semibold text-[#4285F4] ring-1 ring-[#d8e7ff] hover:bg-[#edf4ff]"
+              className="inline-flex rounded-lg px-4 py-2 text-sm font-semibold text-[#4285F4] ring-1 ring-[#d8e7ff] hover:bg-[#edf4ff]"
             >
               Sign in
             </NavLink>
