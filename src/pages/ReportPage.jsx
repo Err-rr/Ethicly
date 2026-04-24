@@ -23,34 +23,46 @@ export default function ReportPage() {
   const verdict =
     audit.verdict || (audit.parity < 0.6 ? "Biased" : "Unbiased");
 
+  const isBiased = verdict.toLowerCase().includes("bias");
+
+  const verdictColor = isBiased
+    ? "text-[#EA4335]"   // red
+    : "text-[#34A853]";  // green
+
   return (
-    <PageShell className="pb-16 overflow-x-hidden">
+    <PageShell className="pb-16 overflow-x-hidden bg-[#f8f9fa]">
       <div className="mb-8 max-w-3xl">
-        <p className="text-sm font-semibold text-google-blue">
+        <p className="text-sm font-semibold text-[#4285F4]">
           Reviewer report
         </p>
+
         <h1 className="mt-2 text-3xl font-bold text-[#202124] sm:text-4xl">
           Fairness report
         </h1>
+
         <p className="mt-3 text-base text-[#5f6368]">
           A concise governance snapshot for {dataset.fileName}.
         </p>
       </div>
 
-      <Card className="space-y-6">
-        <div className="flex flex-col gap-4 border-b border-[#e5e7eb] pb-5 sm:flex-row sm:items-center sm:justify-between">
-          
+      <Card className="space-y-6 bg-white border border-[#e8eaed] shadow-sm">
+        {/* HEADER */}
+        <div className="flex flex-col gap-4 border-b border-[#e8eaed] pb-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-bold text-[#202124]">
               Ethicly audit summary
             </h2>
+
             <p className="mt-1 text-sm text-[#5f6368]">
-              This model is <strong>{verdict}</strong> based on analysis using{" "}
-              <strong>{audit.sensitive_column}</strong>.
+              This model is{" "}
+              <strong className={verdictColor}>{verdict}</strong> based on
+              analysis using{" "}
+              <strong className="text-[#4285F4]">
+                {audit.sensitive_column}
+              </strong>.
             </p>
           </div>
 
-          {/* 🔥 BUTTON GROUP */}
           <div className="flex gap-3">
             <Button
               onClick={() => downloadReport(audit)}
@@ -63,7 +75,6 @@ export default function ReportPage() {
               Back to Dashboard
             </Button>
           </div>
-
         </div>
 
         {/* METRICS */}
@@ -72,38 +83,41 @@ export default function ReportPage() {
             label="Bias verdict"
             value={verdict}
             detail={
-              verdict === "Biased"
-                ? "Significant disparity detected across groups"
-                : "No major bias detected across groups"
+              isBiased
+                ? "Significant disparity detected"
+                : "No major bias detected"
             }
-            tone={verdict === "Biased" ? "red" : "green"}
+            tone={isBiased ? "red" : "green"}
           />
 
           <ReportStat
             label="Fairness score"
             value={`${audit.fairness_score}/100`}
+            color="text-[#4285F4]"
           />
 
           <ReportStat
             label="Parity"
             value={audit.parity.toFixed(2)}
+            color="text-[#FBBC05]"
           />
 
           <ReportStat
             label="Groups compared"
             value={audit.groupComparison.length}
+            color="text-[#EA4335]" // 🔥 ALWAYS RED
           />
         </div>
 
         {/* INTERPRETATION */}
-        <div className="rounded-xl border border-[#e5e7eb] bg-white p-5">
+        <div className="rounded-xl border border-[#e8eaed] bg-white p-5 shadow-sm">
           <h3 className="text-lg font-semibold text-[#202124]">
             Interpretation
           </h3>
 
           <p className="mt-2 text-sm text-[#5f6368] leading-relaxed">
-            {verdict === "Biased"
-              ? "The model shows unequal outcomes across groups. Approval rates differ significantly, indicating potential unfair treatment and bias risk."
+            {isBiased
+              ? "The model shows unequal outcomes across groups. Approval rates differ significantly, indicating bias risk."
               : "The model shows consistent outcomes across groups. Approval rates are balanced, indicating fair decision-making."}
           </p>
         </div>
@@ -118,11 +132,14 @@ export default function ReportPage() {
   );
 }
 
-function ReportStat({ label, value }) {
+function ReportStat({ label, value, color }) {
   return (
-    <div className="min-h-[120px] rounded-xl border border-[#e5e7eb] bg-[#F8FAFC] p-5 shadow-sm">
+    <div className="min-h-[120px] rounded-xl border border-[#e8eaed] bg-white p-5 shadow-sm hover:shadow-md transition">
       <p className="text-sm text-[#5f6368]">{label}</p>
-      <p className="mt-3 text-2xl font-bold text-[#202124]">{value}</p>
+
+      <p className={`mt-3 text-2xl font-bold ${color}`}>
+        {value}
+      </p>
     </div>
   );
 }
